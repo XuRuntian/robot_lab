@@ -15,7 +15,7 @@ from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
 
 import robot_lab.tasks.manager_based.manipulation.wiping.mdp as mdp
-from robot_lab.assets.booster_t1 import BOOSTER_T1_CFG  # 引入你之前的机器人配置
+from robot_lab.assets.booster_gripper import BOOSTER_T1_CFG
 
 ##
 # Scene Definition
