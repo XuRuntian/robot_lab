@@ -1,6 +1,3 @@
-# Copyright (c) 2024-2026 Ziqi Fan
-# SPDX-License-Identifier: Apache-2.0
-
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
@@ -106,17 +103,17 @@ BOOSTER_T1_CFG = ArticulationCfg(
             ],
             effort_limit_sim=18.0,
             velocity_limit_sim=18.8,
-            stiffness=40.0,
-            damping=10.0,
+            stiffness=0.0,
+            damping=0.0,
             armature=0.01,
         ),
 
         "gripper": ImplicitActuatorCfg(
             joint_names_expr=[".*_Link22", ".*_Link11"], 
-            effort_limit_sim=10.0, 
+            effort_limit_sim=20.0, 
             velocity_limit_sim=2.0,
-            stiffness=100.0,       
-            damping=5.0,
+            stiffness=1000.0,       
+            damping=10.0,
             armature=0.01,
         )
     },
