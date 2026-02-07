@@ -1,34 +1,35 @@
+# Copyright (c) 2024-2026 Ziqi Fan
+# SPDX-License-Identifier: Apache-2.0
+
 import isaaclab.sim as sim_utils
 from isaaclab.actuators import ImplicitActuatorCfg
 from isaaclab.assets.articulation import ArticulationCfg
+import os
 
+# 确保路径引用正确
 from robot_lab.assets import ISAACLAB_ASSETS_DATA_DIR
 
 BOOSTER_T1_CFG = ArticulationCfg(
-    spawn=sim_utils.UrdfFileCfg(
-        fix_base=False,
-        merge_fixed_joints=True,
-        replace_cylinders_with_capsules=False,
-        asset_path=f"{ISAACLAB_ASSETS_DATA_DIR}/Robots/booster/t1_description/usd/t1_with_7dof_arms_gripper.usd",
+    spawn=sim_utils.UsdFileCfg(
+        usd_path=f"{ISAACLAB_ASSETS_DATA_DIR}/Robots/booster/t1_description/usd/t1_with_7dof_arms_gripper.usd",
+        # 激活接触传感器（这是解决你之前 ValueError 的关键）
         activate_contact_sensors=True,
+        # 刚体属性
         rigid_props=sim_utils.RigidBodyPropertiesCfg(
             disable_gravity=False,
-            retain_accelerations=False,
-            linear_damping=0.0,
-            angular_damping=0.0,
-            max_linear_velocity=1000.0,
-            max_angular_velocity=1000.0,
             max_depenetration_velocity=1.0,
+            enable_gyroscopic_forces=True,
         ),
+        # 关节根属性：增加迭代次数以提高变阻抗控制的数值稳定性
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
-            enabled_self_collisions=False, solver_position_iteration_count=8, solver_velocity_iteration_count=4
+            enabled_self_collisions=False, 
+            solver_position_iteration_count=8, 
+            solver_velocity_iteration_count=4
         ),
-        joint_drive=sim_utils.UrdfConverterCfg.JointDriveCfg(
-            gains=sim_utils.UrdfConverterCfg.JointDriveCfg.PDGainsCfg(stiffness=0, damping=0)
-        ),
+        # 注意：UsdFileCfg 没有 joint_drive 参数，关节驱动由下面的 actuators 统一管理
     ),
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.72),
+        pos=(0.0, 0.0, 0.72), # 略高于地面以对齐桌子高度
         joint_pos={
             # Head
             "AAHead_yaw": 0.0,
@@ -49,73 +50,37 @@ BOOSTER_T1_CFG = ArticulationCfg(
             ".*_Knee_Pitch": 0.42,
             ".*_Ankle_Pitch": -0.23,
             ".*_Ankle_Roll": 0.0,
-            # Gripper
-            ".*_Link22": 0.0,
-            ".*_Link11": 0.0,
         },
-        joint_vel={".*": 0.0},
     ),
+    # 允许 90% 的物理限位，防止打磨时卡死
     soft_joint_pos_limit_factor=0.9,
     actuators={
         "legs": ImplicitActuatorCfg(
-            joint_names_expr=[
-                ".*_Hip_Pitch",
-                ".*_Hip_Roll",
-                ".*_Hip_Yaw",
-                ".*_Knee_Pitch",
-                "Waist",
-            ],
-            effort_limit_sim={
-                ".*_Hip_Pitch": 45.0,
-                ".*_Hip_Roll": 30.0,
-                ".*_Hip_Yaw": 30.0,
-                ".*_Knee_Pitch": 60.0,
-                "Waist": 30.0,
-            },
-            velocity_limit_sim={
-                ".*_Hip_Pitch": 12.5,
-                ".*_Hip_Roll": 10.9,
-                ".*_Hip_Yaw": 10.9,
-                ".*_Knee_Pitch": 11.7,
-                "Waist": 10.88,
-            },
+            joint_names_expr=[".*_Hip_.*", ".*_Knee_.*", "Waist"],
             stiffness=200.0,
             damping=5.0,
-            armature=0.01,
         ),
         "feet": ImplicitActuatorCfg(
-            joint_names_expr=[".*_Ankle_Pitch", ".*_Ankle_Roll"],
-            effort_limit_sim={".*_Ankle_Pitch": 24, ".*_Ankle_Roll": 15},
-            velocity_limit_sim={".*_Ankle_Pitch": 18.8, ".*_Ankle_Roll": 12.4},
+            joint_names_expr=[".*_Ankle_.*"],
             stiffness=50.0,
             damping=1.0,
-            armature=0.01,
         ),
+        # 臂部：设为 0 是为了让 actions.py 中的变阻抗逻辑（Variable Impedance）完全接管
         "arms": ImplicitActuatorCfg(
-            joint_names_expr=[
-                ".*_Shoulder_Pitch",
-                ".*_Shoulder_Roll",
-                ".*_Elbow_Pitch",
-                ".*_Elbow_Yaw",
-                ".*_Wrist_Pitch",
-                ".*_Wrist_Roll",
-                ".*_Hand_Roll",
-            ],
-            effort_limit_sim=18.0,
-            velocity_limit_sim=18.8,
-            stiffness=0.0,
+            joint_names_expr=[".*_Shoulder_.*", ".*_Elbow_.*", ".*_Wrist_.*", ".*_Hand_.*"],
+            stiffness=0.0, 
             damping=0.0,
-            armature=0.01,
         ),
-
+        "head": ImplicitActuatorCfg( # 补全头部关节，凑足 37 个
+            joint_names_expr=["Head_.*", "AAHead_.*"],
+            stiffness=10.0,
+            damping=1.0,
+        ),
+        # 夹爪：高刚度确保握死工具
         "gripper": ImplicitActuatorCfg(
             joint_names_expr=[".*_Link22", ".*_Link11"], 
-            effort_limit_sim=20.0, 
-            velocity_limit_sim=2.0,
             stiffness=1000.0,       
             damping=10.0,
-            armature=0.01,
         )
     },
 )
-"""Configuration for the Booster T1 Humanoid robot."""

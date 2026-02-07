@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING
 import isaaclab.utils.math as math_utils
 from isaaclab.assets import Articulation
 from isaaclab.managers import SceneEntityCfg
-
+from isaaclab.envs.mdp.terminations import time_out
 if TYPE_CHECKING:
     from isaaclab.envs import ManagerBasedRLEnv
 

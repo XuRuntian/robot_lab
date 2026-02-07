@@ -1,9 +1,9 @@
 # Copyright (c) 2024-2026 Ziqi Fan
 # SPDX-License-Identifier: Apache-2.0
 
-import gymnasium as gym, wipe_env_cfg
+import gymnasium as gym
 
-from . import agents
+from . import agents,wipe_env_cfg
 
 ##
 # Register Gym environments.
