@@ -47,7 +47,7 @@ class WipingSceneCfg(InteractiveSceneCfg):
     table = AssetBaseCfg(
         prim_path="{ENV_REGEX_NS}/Table",
         spawn=sim_utils.UsdFileCfg(
-            usd_path=os.path.join(DATA_DIR, "table/table.usd"),
+            usd_path=os.path.join(DATA_DIR, "table/desk.usd"),
             rigid_props=sim_utils.RigidBodyPropertiesCfg(),
             collision_props=sim_utils.CollisionPropertiesCfg(),
         ),
@@ -59,9 +59,10 @@ class WipingSceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/Apple",
         spawn=sim_utils.UsdFileCfg(
             usd_path=os.path.join(DATA_DIR, "fruits/apple.usd"),
+            scale=(0.1, 0.1, 0.1),
             collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True),
         ),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.6, 0.0, 0.75)),
+        init_state=AssetBaseCfg.InitialStateCfg(pos=(1.6, 0.0, 0.75)),
     )
 
     # 接触力传感器 (对应 LowState 需求)
@@ -214,7 +215,7 @@ class WipingEnvCfg(ManagerBasedRLEnvCfg):
         self.decimation = 4
         self.episode_length_s = 15.0
         self.sim.dt = 0.005 # 200Hz 物理频率
-        
+        self.sim.use_fabric = False
         # 4. 视角设置
         self.viewer.eye = (1.5, 1.5, 1.5)
         self.viewer.asset_name = "robot" # 告诉渲染器默认盯在哪儿

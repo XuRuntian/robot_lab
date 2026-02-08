@@ -9,6 +9,8 @@ import os
 # 确保路径引用正确
 from robot_lab.assets import ISAACLAB_ASSETS_DATA_DIR
 
+
+
 BOOSTER_T1_CFG = ArticulationCfg(
     spawn=sim_utils.UsdFileCfg(
         usd_path=f"{ISAACLAB_ASSETS_DATA_DIR}/Robots/booster/t1_description/usd/t1_with_7dof_arms_gripper.usd",
@@ -24,12 +26,14 @@ BOOSTER_T1_CFG = ArticulationCfg(
         articulation_props=sim_utils.ArticulationRootPropertiesCfg(
             enabled_self_collisions=False, 
             solver_position_iteration_count=8, 
-            solver_velocity_iteration_count=4
+            solver_velocity_iteration_count=4,
+            fix_root_link=True,
         ),
-        # 注意：UsdFileCfg 没有 joint_drive 参数，关节驱动由下面的 actuators 统一管理
+
     ),
+    
     init_state=ArticulationCfg.InitialStateCfg(
-        pos=(0.0, 0.0, 0.72), # 略高于地面以对齐桌子高度
+        pos=(0.0, 0.0, 0.7), # 略高于地面以对齐桌子高度
         joint_pos={
             # Head
             "AAHead_yaw": 0.0,
