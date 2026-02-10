@@ -112,7 +112,7 @@ def reset_object_pose(env: ManagerBasedRLEnv, env_ids: torch.Tensor, asset_cfg: 
         new_state = asset.data.default_root_state[env_ids].clone()
         
         # 2. 随机化 X/Y 坐标
-        new_state[:, 0] = sample_uniform(0.45, 0.55, (len(env_ids),), device=env.device)
+        new_state[:, 0] = sample_uniform(0.65, 0.55, (len(env_ids),), device=env.device)
         new_state[:, 1] = sample_uniform(-0.1, 0.1, (len(env_ids),), device=env.device)
         # Z 轴对齐桌面 (假设桌面 0.73 + 苹果半径)
         new_state[:, 2] = 0.76 
@@ -123,7 +123,7 @@ def reset_object_pose(env: ManagerBasedRLEnv, env_ids: torch.Tensor, asset_cfg: 
         # 如果是 XFormPrim (没有 .data)，我们需要手动构造位置
         # 注意：XFormPrim 不支持速度随机化，只能设位置
         pos = torch.zeros((len(env_ids), 3), device=env.device)
-        pos[:, 0] = sample_uniform(0.45, 0.55, (len(env_ids),), device=env.device)
+        pos[:, 0] = sample_uniform(0.65, 0.55, (len(env_ids),), device=env.device)
         pos[:, 1] = sample_uniform(-0.1, 0.1, (len(env_ids),), device=env.device)
         pos[:, 2] = 0.76
         

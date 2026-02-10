@@ -19,6 +19,7 @@ from isaaclab.scene import InteractiveSceneCfg
 from isaaclab.sensors import ContactSensorCfg
 from isaaclab.utils import configclass
 from isaaclab.utils.noise import AdditiveUniformNoiseCfg as Unoise
+from isaaclab.assets import RigidObjectCfg 
 
 import robot_lab.tasks.manager_based.manipulation.wiping.mdp as mdp
 from robot_lab.assets.booster_gripper import BOOSTER_T1_CFG
@@ -48,23 +49,55 @@ class WipingSceneCfg(InteractiveSceneCfg):
         prim_path="{ENV_REGEX_NS}/Table",
         spawn=sim_utils.UsdFileCfg(
             usd_path=os.path.join(DATA_DIR, "table/desk.usd"),
-            rigid_props=sim_utils.RigidBodyPropertiesCfg(),
-            collision_props=sim_utils.CollisionPropertiesCfg(),
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                kinematic_enabled=True,
+                disable_gravity=False,
+            ),
+            collision_props=sim_utils.CollisionPropertiesCfg(
+                collision_enabled=True,
+            ),
+            scale=(0.07, 0.07, 0.07),
+
         ),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(0.6, 0.0, 0.0)),
+        init_state=AssetBaseCfg.InitialStateCfg(
+            pos=(0.8, 0.0, 0.0),
+            rot=(0.7071, 0.0, 0.0, 0.7071)       
+        )
     )
 
     # 目标物体：苹果 (测试变阻抗的核心)
-    apple = AssetBaseCfg(
-        prim_path="{ENV_REGEX_NS}/Apple",
-        spawn=sim_utils.UsdFileCfg(
-            usd_path=os.path.join(DATA_DIR, "fruits/apple.usd"),
-            scale=(0.1, 0.1, 0.1),
+    # apple = RigidObjectCfg( # 修正：从 AssetBaseCfg 改为 RigidObjectCfg
+    #     prim_path="{ENV_REGEX_NS}/TargetBlock",
+    #     spawn=sim_utils.UsdFileCfg(
+    #         usd_path=os.path.join(DATA_DIR, "fruits/apple.usd"),
+    #         rigid_props=sim_utils.RigidBodyPropertiesCfg(
+    #             kinematic_enabled=False, 
+    #             disable_gravity=False,
+    #         ),
+    #         collision_props=sim_utils.CollisionPropertiesCfg(
+    #             collision_enabled=True,
+    #         ),
+    #         scale=(0.01, 0.01, 0.01),
+    #     ),
+    #     # 此时这个 pos 拥有极高优先级，会强行覆盖 USD 默认值
+    #     init_state=RigidObjectCfg.InitialStateCfg(pos=(0.4, 0.0, 0.85)), 
+    # )
+    apple = RigidObjectCfg(
+        prim_path="{ENV_REGEX_NS}/TargetBlock",
+        spawn=sim_utils.MeshCuboidCfg(
+            size=(0.1, 0.1, 0.1),
+            # 暴力破解 1：强制关闭实例化，解开空间锁
+            func=sim_utils.spawn_mesh_cuboid, 
+            # 强制设置物理
+            rigid_props=sim_utils.RigidBodyPropertiesCfg(
+                kinematic_enabled=False,
+                disable_gravity=False,
+                max_depenetration_velocity=10.0,
+            ),
             collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True),
         ),
-        init_state=AssetBaseCfg.InitialStateCfg(pos=(1.6, 0.0, 0.75)),
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.55, 0.0, 1.0)), # 修正：设置苹果初始位置
     )
-
     # 接触力传感器 (对应 LowState 需求)
     contact_forces = ContactSensorCfg(
         prim_path="{ENV_REGEX_NS}/Robot/.*_hand_.*", history_length=3, debug_vis=True
