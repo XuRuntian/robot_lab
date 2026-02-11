@@ -41,13 +41,19 @@ def _randomize_prop_by_op(
         raise ValueError(f"Unknown distribution: {distribution}")
 
     new_values = current_values.clone()
-    # 这里的索引处理要小心 [env_ids[:, None], joint_ids]
+    
+    # 获取需要修改的索引视图
+    if not isinstance(joint_ids, slice):
+        indices = (env_ids[:, None], joint_ids)
+    else:
+        indices = (env_ids, joint_ids)
+
     if operation == "abs":
-        new_values[env_ids[:, None] if not isinstance(joint_ids, slice) else env_ids, joint_ids] = noise
+        new_values[indices] = noise
     elif operation == "add":
-        new_values[env_ids[:, None] if not isinstance(joint_ids, slice) else env_ids, joint_ids] += noise
+        new_values[indices] += noise
     elif operation == "scale":
-        new_values[env_ids[:, None] if not isinstance(joint_ids, slice) else env_ids, joint_ids] *= noise
+        new_values[indices] *= noise
 
     return new_values
 
@@ -59,9 +65,13 @@ def randomize_joint_default_pos(
     operation: Literal["add", "scale", "abs"] = "abs",
     distribution: Literal["uniform", "log_uniform", "gaussian"] = "uniform",
 ):
-    """随机化关节默认位置（模拟标定误差）。"""
+    """
+    随机化关节默认位置（模拟标定误差）。
+    通常在 'startup' 阶段调用。
+    """
     asset: Articulation = env.scene[asset_cfg.name]
 
+    # 1. 保护机制：确保我们有一个永远干净的“出厂设置” (nominal)
     if not hasattr(asset.data, "default_joint_pos_nominal"):
         asset.data.default_joint_pos_nominal = torch.clone(asset.data.default_joint_pos[0])
 
@@ -73,9 +83,14 @@ def randomize_joint_default_pos(
     else:
         joint_ids = torch.tensor(asset_cfg.joint_ids, dtype=torch.long, device=asset.device)
 
+    # 2. 基于 nominal 值进行随机化，而不是基于上一次的 default 值 (防止漂移)
+    # 注意：这里我们读取的是 nominal，应用到 default
+    # 如果你想基于当前的 default 叠加，就把下面的 nominal 改回 default_joint_pos
+    base_values = asset.data.default_joint_pos_nominal.unsqueeze(0).repeat(env.scene.num_envs, 1)
+
     if pos_distribution_params is not None:
         new_default_pos = _randomize_prop_by_op(
-            asset.data.default_joint_pos, 
+            base_values, # 使用干净的基准值
             pos_distribution_params, 
             env_ids, 
             joint_ids, 
@@ -83,27 +98,48 @@ def randomize_joint_default_pos(
             distribution=distribution
         )
         
-        # 更新 asset 数据缓存
-        asset.data.default_joint_pos[env_ids[:, None] if not isinstance(joint_ids, slice) else env_ids, joint_ids] = \
-            new_default_pos[env_ids[:, None] if not isinstance(joint_ids, slice) else env_ids, joint_ids]
+        # 3. 更新 asset 数据缓存 (这会影响 reset_robot_joints 的行为)
+        if not isinstance(joint_ids, slice):
+            asset.data.default_joint_pos[env_ids[:, None], joint_ids] = \
+                new_default_pos[env_ids[:, None], joint_ids]
+        else:
+            asset.data.default_joint_pos[env_ids] = new_default_pos[env_ids]
 
-        # 同步更新 ActionManager 中的偏移量
+        # 4. 同步更新 ActionManager 中的偏移量 (仅当确实需要改变控制零点时)
+        # 警告：如果你只是想让机器人出生位置变，但不想改变控制器的目标零点，请注释掉这段
         if "arm_action" in env.action_manager._terms:
-            action_term = env.action_manager.get_term("arm_action")
-            if hasattr(action_term, "_offset"):
-                action_term._offset[env_ids[:, None] if not isinstance(joint_ids, slice) else env_ids, joint_ids] = \
-                    asset.data.default_joint_pos[env_ids[:, None] if not isinstance(joint_ids, slice) else env_ids, joint_ids]
+            try:
+                action_term = env.action_manager.get_term("arm_action")
+                if hasattr(action_term, "_offset"):
+                    if not isinstance(joint_ids, slice):
+                        action_term._offset[env_ids[:, None], joint_ids] = \
+                            asset.data.default_joint_pos[env_ids[:, None], joint_ids]
+                    else:
+                        action_term._offset[env_ids] = asset.data.default_joint_pos[env_ids]
+            except LookupError:
+                pass # 如果没找到 arm_action 也不要报错崩溃
 
 def reset_robot_joints(env: ManagerBasedRLEnv, env_ids: torch.Tensor, asset_cfg: SceneEntityCfg):
-    """重置机器人关节到初始姿态。"""
+    """
+    重置机器人关节到初始姿态。
+    通常在 'reset' 阶段调用。
+    """
     asset: Articulation = env.scene[asset_cfg.name]
+    
+    # 1. 获取默认关节位置 (这个值可能已经被 randomize_joint_default_pos 修改过了，这是预期的)
     default_joint_pos = asset.data.default_joint_pos[env_ids]
+    
+    # 2. 添加复位噪声 (模拟每次回零的微小误差，例如 +/- 0.02 弧度)
     noise = sample_uniform(-0.02, 0.02, default_joint_pos.shape, device=env.device)
     
+    # 3. 强制写入仿真器 (同时将速度重置为 0)
     asset.write_joint_state_to_sim(default_joint_pos + noise, torch.zeros_like(default_joint_pos), env_ids=env_ids)
 
 def reset_object_pose(env: ManagerBasedRLEnv, env_ids: torch.Tensor, asset_cfg: SceneEntityCfg):
-    """【核心修复】重置擦拭对象的位置，兼容 XFormPrim 和 RigidObject。"""
+    """
+    【核心修复】重置擦拭对象的位置，兼容 XFormPrim 和 RigidObject。
+    已修复采样范围错误 (low > high)。
+    """
     asset = env.scene[asset_cfg.name]
     
     # 1. 检查是否是 RigidObject (具有 .data 属性)
@@ -112,18 +148,20 @@ def reset_object_pose(env: ManagerBasedRLEnv, env_ids: torch.Tensor, asset_cfg: 
         new_state = asset.data.default_root_state[env_ids].clone()
         
         # 2. 随机化 X/Y 坐标
-        new_state[:, 0] = sample_uniform(0.65, 0.55, (len(env_ids),), device=env.device)
+        # 修正：low (0.55) 必须小于 high (0.65)
+        new_state[:, 0] = sample_uniform(0.55, 0.65, (len(env_ids),), device=env.device)
         new_state[:, 1] = sample_uniform(-0.1, 0.1, (len(env_ids),), device=env.device)
-        # Z 轴对齐桌面 (假设桌面 0.73 + 苹果半径)
+        # Z 轴对齐桌面
         new_state[:, 2] = 0.76 
         
         # 3. 写入仿真 (RigidObject 专用)
         asset.write_root_state_to_sim(new_state, env_ids=env_ids)
     else:
-        # 如果是 XFormPrim (没有 .data)，我们需要手动构造位置
-        # 注意：XFormPrim 不支持速度随机化，只能设位置
+        # 如果是 XFormPrim (没有 .data)
         pos = torch.zeros((len(env_ids), 3), device=env.device)
-        pos[:, 0] = sample_uniform(0.65, 0.55, (len(env_ids),), device=env.device)
+        
+        # 修正：low (0.55) 必须小于 high (0.65)
+        pos[:, 0] = sample_uniform(0.55, 0.65, (len(env_ids),), device=env.device)
         pos[:, 1] = sample_uniform(-0.1, 0.1, (len(env_ids),), device=env.device)
         pos[:, 2] = 0.76
         

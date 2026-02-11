@@ -178,6 +178,12 @@ class EventCfg:
         mode="startup",
         params={"asset_cfg": SceneEntityCfg("robot"), "pos_distribution_params": (-0.01, 0.01), "operation": "add"}
     )
+
+    reset_robot = EventTerm(
+        func=mdp.reset_robot_joints, # 调用你在 mdp.py 里写的重置函数
+        mode="reset",                # 在每次 env.reset() 时触发
+        params={"asset_cfg": SceneEntityCfg("robot")}
+    )
     # 重置物体位置
     reset_apple = EventTerm(
         func=mdp.reset_object_pose,
