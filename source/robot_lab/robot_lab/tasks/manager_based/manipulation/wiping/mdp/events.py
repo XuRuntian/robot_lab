@@ -149,7 +149,7 @@ def reset_object_pose(env: ManagerBasedRLEnv, env_ids: torch.Tensor, asset_cfg: 
         
         # 2. 随机化 X/Y 坐标
         # 修正：low (0.55) 必须小于 high (0.65)
-        new_state[:, 0] = sample_uniform(0.55, 0.65, (len(env_ids),), device=env.device)
+        new_state[:, 0] = sample_uniform(0.45, 0.65, (len(env_ids),), device=env.device)
         new_state[:, 1] = sample_uniform(-0.1, 0.1, (len(env_ids),), device=env.device)
         # Z 轴对齐桌面
         new_state[:, 2] = 0.76 
@@ -161,7 +161,7 @@ def reset_object_pose(env: ManagerBasedRLEnv, env_ids: torch.Tensor, asset_cfg: 
         pos = torch.zeros((len(env_ids), 3), device=env.device)
         
         # 修正：low (0.55) 必须小于 high (0.65)
-        pos[:, 0] = sample_uniform(0.55, 0.65, (len(env_ids),), device=env.device)
+        pos[:, 0] = sample_uniform(0.45, 0.65, (len(env_ids),), device=env.device)
         pos[:, 1] = sample_uniform(-0.1, 0.1, (len(env_ids),), device=env.device)
         pos[:, 2] = 0.76
         

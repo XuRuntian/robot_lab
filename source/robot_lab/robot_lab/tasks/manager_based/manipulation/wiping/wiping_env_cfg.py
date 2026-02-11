@@ -60,7 +60,7 @@ class WipingSceneCfg(InteractiveSceneCfg):
 
         ),
         init_state=AssetBaseCfg.InitialStateCfg(
-            pos=(0.8, 0.0, 0.0),
+            pos=(0.65, 0.0, 0.0),
             rot=(0.7071, 0.0, 0.0, 0.7071)       
         )
     )
@@ -80,12 +80,12 @@ class WipingSceneCfg(InteractiveSceneCfg):
     #         scale=(0.01, 0.01, 0.01),
     #     ),
     #     # 此时这个 pos 拥有极高优先级，会强行覆盖 USD 默认值
-    #     init_state=RigidObjectCfg.InitialStateCfg(pos=(0.4, 0.0, 0.85)), 
+    #     init_state=RigidObjectCfg.InitialStateCfg(pos=(0.45, 0.0, 0.85)), 
     # )
     apple = RigidObjectCfg(
         prim_path="{ENV_REGEX_NS}/TargetBlock",
         spawn=sim_utils.MeshCuboidCfg(
-            size=(0.1, 0.1, 0.1),
+            size=(0.2, 0.2, 0.03),
             # 暴力破解 1：强制关闭实例化，解开空间锁
             func=sim_utils.spawn_mesh_cuboid, 
             # 强制设置物理
@@ -96,7 +96,7 @@ class WipingSceneCfg(InteractiveSceneCfg):
             ),
             collision_props=sim_utils.CollisionPropertiesCfg(collision_enabled=True),
         ),
-        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.55, 0.0, 1.0)), # 修正：设置苹果初始位置
+        init_state=RigidObjectCfg.InitialStateCfg(pos=(0.45, 0.0, 1.0)), # 修正：设置苹果初始位置
     )
     # 接触力传感器 (对应 LowState 需求)
     contact_forces = ContactSensorCfg(
