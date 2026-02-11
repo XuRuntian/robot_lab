@@ -100,7 +100,7 @@ class WipingSceneCfg(InteractiveSceneCfg):
     )
     # 接触力传感器 (对应 LowState 需求)
     contact_forces = ContactSensorCfg(
-        prim_path="{ENV_REGEX_NS}/Robot/.*_hand_.*", history_length=3, debug_vis=True
+        prim_path="{ENV_REGEX_NS}/Robot/.*_Link(11|22)", history_length=3, debug_vis=True
     )
 
 ##
@@ -150,7 +150,7 @@ class ObservationsCfg:
             func=mdp.ee_position_error_b, 
             params={
                 "command_name": "wiping", 
-                "robot_cfg": SceneEntityCfg("robot", body_names=".*_hand_link.*")
+                "robot_cfg": SceneEntityCfg("robot", body_names=".*_Link(11|22)")
             }
         )
         
@@ -198,13 +198,13 @@ class RewardsCfg:
     pos_tracking = RewTerm(
         func=mdp.ee_position_tracking_exp, 
         weight=1.0, 
-        params={"std": 0.2, "command_name": "wiping", "robot_cfg": SceneEntityCfg("robot", body_names=".*_hand_link")}
+        params={"std": 0.2, "command_name": "wiping", "robot_cfg": SceneEntityCfg("robot", body_names=".*_Link(11|22)")}
     )
     # 2. 恒力奖励 (核心)
     force_tracking = RewTerm(
         func=mdp.constant_force_tracking_exp, 
         weight=5.0, 
-        params={"std": 2.0, "target_force": 5.0, "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_hand_link")}
+        params={"std": 2.0, "target_force": 5.0, "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_Link(11|22)")}
     )
     # 3. 功耗惩罚
     torque_penalty = RewTerm(
@@ -219,11 +219,11 @@ class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     ee_too_far = DoneTerm(
         func=mdp.bad_ee_distance, 
-        params={"threshold": 0.5, "command_name": "wiping", "robot_cfg": SceneEntityCfg("robot", body_names=".*_hand_link")}
+        params={"threshold": 0.5, "command_name": "wiping", "robot_cfg": SceneEntityCfg("robot", body_names=".*_Link(11|22)")}
     )
     force_limit = DoneTerm(
         func=mdp.excessive_force, 
-        params={"threshold": 60.0, "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_hand_link")}
+        params={"threshold": 60.0, "sensor_cfg": SceneEntityCfg("contact_forces", body_names=".*_Link(11|22)")}
     )
 
 ##
