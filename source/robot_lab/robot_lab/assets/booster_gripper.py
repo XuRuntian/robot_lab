@@ -71,9 +71,9 @@ BOOSTER_T1_CFG = ArticulationCfg(
         ),
         # 臂部：设为 0 是为了让 actions.py 中的变阻抗逻辑（Variable Impedance）完全接管
         "arms": ImplicitActuatorCfg(
-            joint_names_expr=[".*_Shoulder_.*", ".*_Elbow_.*", ".*_Wrist_.*", ".*_Hand_.*"],
-            stiffness=0.0, 
-            damping=0.0,
+            joint_names_expr=[".*_Shoulder_.*", ".*_Elbow_.*", ".*_Wrist_.*", ".*_Hand_.*",],
+            stiffness=100.0, 
+            damping=5.0,
         ),
         "head": ImplicitActuatorCfg( # 补全头部关节，凑足 37 个
             joint_names_expr=["Head_.*", "AAHead_.*"],
@@ -85,6 +85,13 @@ BOOSTER_T1_CFG = ArticulationCfg(
             joint_names_expr=[".*_Link22", ".*_Link11"], 
             stiffness=1000.0,       
             damping=10.0,
+        ),
+        "extra_links": ImplicitActuatorCfg(
+            # 补全剩下的 Link1, Link2 (手指根部) = 4个
+            # 加上这组，总数就对齐 37 了
+            joint_names_expr=["left_Link[12]$", "right_Link[12]$"], 
+            stiffness=100.0,
+            damping=5.0,
         )
     },
 )

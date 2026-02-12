@@ -60,7 +60,7 @@ class WipingSceneCfg(InteractiveSceneCfg):
 
         ),
         init_state=AssetBaseCfg.InitialStateCfg(
-            pos=(0.65, 0.0, 0.0),
+            pos=(0.65, 0.0, 0.0), #0.65,0,0
             rot=(0.7071, 0.0, 0.0, 0.7071)       
         )
     )
@@ -118,8 +118,19 @@ class ActionsCfg:
     # 7维：6D位姿 + 1D刚度缩放
     arm_action = mdp.WipingVariableImpedanceActionCfg(
         asset_name="robot",
-        pose_limit=0.01,
-        nominal_kp=40.0,
+        
+        # 1. 确保末端 Link 名字正确 (看你之前的 Log 是 right_Link22)
+        body_name="right_Link22",
+        
+        # 2. 确保关节正则正确
+        joint_names=[".*Right.*", ".*right.*"],
+        
+        # 3. 参数调整
+        scale=0.05,        # 每次移动 5cm
+        nominal_kp=800.0,  # 基础刚度
+        damping_ratio=1.0, # 阻尼比
+        
+        # ❌ 删除 controller=... 这一行！千万别留！
     )
 
 
@@ -219,7 +230,7 @@ class TerminationsCfg:
     time_out = DoneTerm(func=mdp.time_out, time_out=True)
     ee_too_far = DoneTerm(
         func=mdp.bad_ee_distance, 
-        params={"threshold": 0.5, "command_name": "wiping", "robot_cfg": SceneEntityCfg("robot", body_names=".*_Link(11|22)")}
+        params={"threshold": 1, "command_name": "wiping", "robot_cfg": SceneEntityCfg("robot", body_names=".*_Link(11|22)")}
     )
     force_limit = DoneTerm(
         func=mdp.excessive_force, 
