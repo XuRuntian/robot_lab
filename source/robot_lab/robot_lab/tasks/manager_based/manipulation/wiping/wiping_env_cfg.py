@@ -60,7 +60,7 @@ class WipingSceneCfg(InteractiveSceneCfg):
 
         ),
         init_state=AssetBaseCfg.InitialStateCfg(
-            pos=(0.65, 0.0, 0.0), #0.65,0,0
+            pos=(1.65, 0.0, 0.0), #0.65,0,0
             rot=(0.7071, 0.0, 0.0, 0.7071)       
         )
     )
@@ -123,7 +123,7 @@ class ActionsCfg:
         body_name="right_Link22",
         
         # 2. 确保关节正则正确
-        joint_names=[".*Right.*", ".*right.*"],
+        joint_names=["Right_Shoulder.*", "Right_Elbow.*", "Right_Wrist.*", "Right_Hand.*",],
         
         # 3. 参数调整
         scale=0.05,        # 每次移动 5cm

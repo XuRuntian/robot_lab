@@ -68,7 +68,6 @@ def heuristic_policy(env, robot, target_pos, current_eef_idx):
     # 4. 组装完整动作
     total_dim = env.action_manager.total_action_dim
     actions = torch.zeros((env.num_envs, total_dim), device=env.device)
-    
     # 位移
     actions[:, :3] = action_pos
     
@@ -77,7 +76,6 @@ def heuristic_policy(env, robot, target_pos, current_eef_idx):
     # 如果 action range 是 [-1, 1]，也设为 1.0
     if total_dim >= 7:
         actions[:, 6] = 1.0 
-        
     return actions, pos_error
 
 # ==============================================================================
